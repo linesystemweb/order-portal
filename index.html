@@ -153,13 +153,58 @@
   .orderform textarea { height: auto; padding: 6px 8px; resize: vertical; }
   .orderform .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .orderform .req { color: #b0332a; font-weight: 700; }
-  .orderform input.bad { border-color: #b0332a; background: #fff6f5; }
+  .orderform input.bad, .orderform select.bad { border-color: #b0332a; background: #fff6f5; }
+  .orderform select {
+    display: block; width: 100%; margin-top: 3px;
+    height: 32px; padding: 0 8px; border: 1px solid #b6c1c9; background: #fff; font-size: 13px; color: var(--ink);
+  }
+  .dealerfixed { display: block; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .kchu { border: 1px solid var(--line-l); background: var(--head); padding: 8px 9px; }
+  .kchu .kchk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); cursor: pointer; }
+  .kchu .kchk input { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; }
+  .kchu #fKchuBox { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .kchu #fKchuBox input, .kchu #fKchuBox textarea { background: #fff; }
+
+  /* ---------- 出荷連絡 ---------- */
+  nav.tabs .badge {
+    display: inline-block; min-width: 16px; margin-left: 6px; padding: 0 5px;
+    background: var(--accent); color: #fff; font-size: 10px; line-height: 16px;
+    text-align: center; border-radius: 8px; font-weight: 700; vertical-align: 2px;
+  }
+  nav.tabs .badge[hidden] { display: none; }
+  .chatwrap { display: flex; justify-content: center; padding: 14px 18px 28px; }
+  .chatcard { width: 100%; max-width: 760px; display: flex; flex-direction: column; }
+  .chatnote { padding: 9px 12px; font-size: 11px; color: var(--muted); line-height: 1.7; border-bottom: 1px solid var(--line-l); }
+  .chatlog { padding: 12px; min-height: 300px; max-height: 52vh; overflow-y: auto; background: var(--bg); }
+  .chatempty { padding: 40px 10px; text-align: center; color: var(--faint); font-size: 12px; }
+  .msg { margin-bottom: 10px; display: flex; flex-direction: column; }
+  .msg .bub {
+    max-width: 78%; padding: 8px 11px; font-size: 13px; line-height: 1.65;
+    white-space: pre-wrap; word-break: break-word; border: 1px solid var(--line-l); background: #fff;
+  }
+  .msg .meta { font-size: 10px; color: var(--faint); margin-top: 3px; }
+  .msg.mine { align-items: flex-end; }
+  .msg.mine .bub { background: #e8f1f8; border-color: #c6dcec; }
+  .msg.them { align-items: flex-start; }
+  .msg.them .bub { background: #fff; }
+  .chatinput { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); align-items: flex-end; }
+  .chatinput textarea {
+    flex: 1; min-height: 44px; padding: 7px 9px; border: 1px solid #b6c1c9;
+    background: #fff; font-size: 13px; color: var(--ink); resize: vertical; font-family: inherit;
+  }
+  .chatinput .btn { height: 44px; padding: 0 20px; }
+  @media (max-width: 860px) {
+    .chatwrap { padding: 10px; }
+    .chatlog { max-height: none; min-height: 240px; }
+    .chatinput textarea { font-size: 16px; }
+    .msg .bub { max-width: 88%; font-size: 14px; }
+  }
   .sendmsg { padding: 10px; font-size: 12px; line-height: 1.7; }
   .sendmsg.ok { background: #e6f2ea; color: #1f6b41; }
   .sendmsg.ng { background: #fdeeec; color: #b0332a; }
   .sendmsg b { font-size: 14px; }
   @media (max-width: 860px) {
-    .orderform input, .orderform textarea { height: 40px; font-size: 16px; }
+    .orderform input, .orderform textarea, .orderform select { height: 40px; font-size: 16px; }
     .orderform textarea { height: auto; }
     .orderform .two { grid-template-columns: 1fr; }
   }
@@ -279,6 +324,10 @@
   body.locked { overflow: hidden; }
   body.locked > header, body.locked > nav, body.locked > .warn,
   body.locked > .wrap, body.locked > #mobar { display: none; }
+  body.locked > #chatView { display: none; }
+  body.chatting > #mobar.on { display: none; }
+  body.chatting .warn { display: none; }
+  .wrap[hidden], #chatView[hidden] { display: none; }
 
   #mobar {
     display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
@@ -332,10 +381,10 @@
 </header>
 
 <nav class="tabs">
-  <div class="on">商品一覧・発注</div>
+  <div class="on" id="tabOrder">商品一覧・発注</div>
+  <div id="tabChat">出荷連絡<span class="badge" id="chatBadge" hidden>0</span></div>
   <div>注文履歴</div>
   <div>見積依頼</div>
-  <div>出荷状況</div>
   <div class="notice" id="stockNote">在庫を読み込み中…</div>
 </nav>
 
@@ -412,6 +461,10 @@
       <div class="note" style="padding:7px 9px;background:var(--head);border:1px solid var(--line-l)">
         お届け先：<b id="fCompanyView">—</b><br>ご登録の住所へお届けします。変更は備考欄にご記入ください。
       </div>
+      <label id="fDealerWrap" hidden>問屋（帳合先） <span class="req">必須</span>
+        <select id="fDealer"></select>
+        <span id="fDealerFixed" class="dealerfixed"></span>
+      </label>
       <label>ご担当者名 <span class="req">必須</span>
         <input type="text" id="fPerson" autocomplete="name">
       </label>
@@ -426,6 +479,20 @@
       <label>希望納期
         <input type="date" id="fDate">
       </label>
+      <div class="kchu">
+        <label class="kchk"><input type="checkbox" id="fKchu"><span>この発注に<b>客注</b>が含まれる</span></label>
+        <div id="fKchuBox" hidden>
+          <label>お客様名
+            <input type="text" id="fKchuName" placeholder="例）山田様">
+          </label>
+          <label>お渡し希望日
+            <input type="date" id="fKchuDate">
+          </label>
+          <label>客注の内容・品番
+            <textarea id="fKchuNote" rows="2" placeholder="例）Z3004A 2個ぶんが客注です／〇〇様お取り置き"></textarea>
+          </label>
+        </div>
+      </div>
       <label>備考
         <textarea id="fNote" rows="2" placeholder="同梱・ラベル貼付のご要望など"></textarea>
       </label>
@@ -442,6 +509,25 @@
       <div class="note">送料は ￥30,000 以上のご発注で無料（試作の暫定ルール）。<br>実際の送料・締め時間・最短出荷日はこれから設定します。</div>
     </div>
   </aside>
+</div>
+
+<div class="chatwrap" id="chatView" hidden>
+  <div class="card chatcard">
+    <h3 style="display:flex;justify-content:space-between;align-items:center">
+      <span>出荷連絡</span>
+      <span id="chatState" style="font-size:11px;color:#9dc0dd;font-weight:400"></span>
+    </h3>
+    <div class="chatnote">
+      出荷・納期・欠品のご連絡はこちらへどうぞ。ラインシステムの出荷担当に届き、返事もこの画面に出ます。
+      お急ぎのときはお電話ください。
+    </div>
+    <div class="chatlog" id="chatLog"><div class="chatempty">まだやりとりはありません。</div></div>
+    <div class="chatinput">
+      <textarea id="chatText" rows="2" placeholder="例）WEB-260909-002 の件、10日着でお願いできますか"></textarea>
+      <button class="btn pri" id="chatSend">送信</button>
+    </div>
+    <div id="chatMsg" class="sendmsg" hidden></div>
+  </div>
 </div>
 
 <div id="mobar">
@@ -771,6 +857,169 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
 
+  // ---- 出荷連絡（ポータル ⇄ Teams） ------------------------------
+  var CHAT = { last: 0, msgs: [], timer: null, open: false, unread: 0, loading: false };
+
+  function showTab(which) {
+    CHAT.open = (which === 'chat');
+    el('chatView').hidden = !CHAT.open;
+    document.querySelector('.wrap').hidden = CHAT.open;
+    el('tabOrder').classList.toggle('on', !CHAT.open);
+    el('tabChat').classList.toggle('on', CHAT.open);
+    document.body.classList.toggle('chatting', CHAT.open);
+    if (CHAT.open) {
+      CHAT.unread = 0;
+      paintBadge();
+      pollChat(true);
+      setTimeout(function () { el('chatText').focus(); }, 50);
+    }
+  }
+
+  function paintBadge() {
+    var b = el('chatBadge');
+    b.hidden = CHAT.unread <= 0;
+    b.textContent = CHAT.unread > 99 ? '99+' : String(CHAT.unread);
+  }
+
+  function paintChat() {
+    var log = el('chatLog');
+    if (!CHAT.msgs.length) {
+      log.innerHTML = '<div class="chatempty">まだやりとりはありません。<br>ご用件をお書きください。</div>';
+      return;
+    }
+    log.innerHTML = CHAT.msgs.map(function (m) {
+      var mine = (m.side === '店');
+      var who = mine ? (ME ? ME.company : '自社') + (m.who ? '（' + m.who + '）' : '')
+                     : 'ラインシステム' + (m.who ? '（' + m.who + '）' : '');
+      return '<div class="msg ' + (mine ? 'mine' : 'them') + '">'
+        + '<div class="bub">' + esc(m.text) + '</div>'
+        + '<div class="meta">' + esc(who) + ' ・ ' + esc(m.at) + '</div></div>';
+    }).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function pollChat(force) {
+    if (!TOKEN || CHAT.loading) { return; }
+    if (!CHAT.open && !force && CHAT.last === 0) { /* 初回は取りに行く */ }
+    CHAT.loading = true;
+    fetch(ORDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ key: ORDER_KEY, action: 'chatList', token: TOKEN, since: CHAT.last })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.ok) { return; }
+        if (d.messages && d.messages.length) {
+          CHAT.msgs = CHAT.msgs.concat(d.messages);
+          if (CHAT.msgs.length > 300) { CHAT.msgs = CHAT.msgs.slice(-300); }
+          if (!CHAT.open) {
+            for (var i = 0; i < d.messages.length; i++) {
+              if (d.messages[i].side !== '店') { CHAT.unread++; }
+            }
+            paintBadge();
+          }
+          paintChat();
+        }
+        CHAT.last = d.last || CHAT.last;
+        el('chatState').textContent = '最終確認 ' + nowHm();
+      })
+      .catch(function () {})
+      .then(function () { CHAT.loading = false; });
+  }
+
+  function nowHm() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  function sendChat() {
+    var t = el('chatText').value.trim();
+    if (!t) { el('chatText').focus(); return; }
+    if (!TOKEN) { showChatMsg('ng', 'ログインの有効時間が切れました。もう一度ログインしてください。'); return; }
+    el('chatSend').disabled = true;
+    fetch(ORDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        key: ORDER_KEY, action: 'chatPost', token: TOKEN,
+        text: t, person: el('fPerson').value.trim()
+      })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.ok) {
+          el('chatText').value = '';
+          showChatMsg('', '');
+          pollChat(true);
+        } else if (d && d.error === 'session') {
+          TOKEN = null;
+          showChatMsg('ng', 'ログインの有効時間が切れました。もう一度ログインしてください。');
+          setTimeout(showLogin, 1200);
+        } else {
+          showChatMsg('ng', '送信できませんでした。お手数ですがお電話ください。');
+        }
+      })
+      .catch(function () { showChatMsg('ng', '送信できませんでした。通信状況をご確認ください。'); })
+      .then(function () { el('chatSend').disabled = false; });
+  }
+
+  function showChatMsg(kind, text) {
+    var n = el('chatMsg');
+    if (!text) { n.hidden = true; n.textContent = ''; return; }
+    n.className = 'sendmsg ' + kind;
+    n.textContent = text;
+    n.hidden = false;
+  }
+
+  function startChat() {
+    CHAT.last = 0; CHAT.msgs = []; CHAT.unread = 0;
+    paintBadge();
+    paintChat();
+    pollChat(true);
+    if (CHAT.timer) { clearInterval(CHAT.timer); }
+    CHAT.timer = setInterval(function () { pollChat(false); }, 20000);
+  }
+
+  function stopChat() {
+    if (CHAT.timer) { clearInterval(CHAT.timer); CHAT.timer = null; }
+    CHAT.last = 0; CHAT.msgs = []; CHAT.unread = 0;
+    paintBadge();
+  }
+
+  // ---- 問屋（帳合先）の選択 --------------------------------------
+  function setDealerField() {
+    var wrap = el('fDealerWrap');
+    var sel = el('fDealer');
+    var fixed = el('fDealerFixed');
+    var list = (ME && ME.dealers) ? ME.dealers : [];
+    if (!list.length) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    if (list.length === 1) {
+      sel.hidden = true;
+      fixed.hidden = false;
+      fixed.textContent = list[0].name;
+      sel.innerHTML = '<option value="0">' + esc(list[0].name) + '</option>';
+      sel.value = '0';
+      return;
+    }
+    sel.hidden = false;
+    fixed.hidden = true;
+    fixed.textContent = '';
+    sel.innerHTML = '<option value="">選んでください</option>' + list.map(function (d, i) {
+      return '<option value="' + i + '">' + esc(d.name) + '</option>';
+    }).join('');
+    sel.value = '';
+  }
+
+  function pickedDealer() {
+    var list = (ME && ME.dealers) ? ME.dealers : [];
+    if (!list.length) { return null; }
+    if (list.length === 1) { return list[0]; }
+    var i = el('fDealer').value;
+    return (i === '') ? null : list[Number(i)];
+  }
+
   // ---- 発注送信 ------------------------------------------------
   function sendOrder() {
     var items = cartItems();
@@ -787,6 +1036,23 @@
     }
     el('fPerson').classList.remove('bad');
 
+    var dealer = pickedDealer();
+    if ((ME && ME.dealers && ME.dealers.length > 1) && !dealer) {
+      el('fDealer').classList.add('bad');
+      el('fDealer').focus();
+      showSend('ng', 'どの問屋（帳合先）を通すか選んでください。');
+      return;
+    }
+    el('fDealer').classList.remove('bad');
+
+    if (el('fKchu').checked && !el('fKchuName').value.trim() && !el('fKchuNote').value.trim()) {
+      el('fKchuName').classList.add('bad');
+      el('fKchuName').focus();
+      showSend('ng', '客注のお客様名か内容のどちらかを入れてください。');
+      return;
+    }
+    el('fKchuName').classList.remove('bad');
+
     if (!ORDER_URL) { showSend('ng', '発注の送信先が設定されていません。'); return; }
 
     var sub = items.reduce(function (s2, x) { return s2 + x.u * x.n; }, 0);
@@ -801,6 +1067,12 @@
       phone: el('fPhone').value.trim(),
       deliveryDate: el('fDate').value,
       note: el('fNote').value.trim(),
+      dealerPick: dealer ? dealer.code : '',
+      dealerPickName: dealer ? dealer.name : '',
+      kchu: el('fKchu').checked ? 'あり' : '',
+      kchuName: el('fKchu').checked ? el('fKchuName').value.trim() : '',
+      kchuDate: el('fKchu').checked ? el('fKchuDate').value : '',
+      kchuNote: el('fKchu').checked ? el('fKchuNote').value.trim() : '',
       subtotal: sub, shipping: ship, tax: tax, total: sub + ship + tax,
       lines: items.map(function (x) {
         return {
@@ -822,13 +1094,17 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.ok) {
-          showSend('ok', '発注を受け付けました。<br>受付番号 <b>' + esc(d.no) + '</b><br>担当者より折り返しご連絡いたします。');
+          showSend('ok', '発注を受け付けました。<br>受付番号 <b>' + esc(d.no) + '</b>'
+            + (dealer ? '<br>問屋（帳合先）：<b>' + esc(dealer.name) + '</b>' : '')
+            + '<br>担当者より折り返しご連絡いたします。');
           state.qty = {};
           render();
         } else if (d && d.error === 'session') {
           TOKEN = null;
           showSend('ng', 'ログインの有効時間が切れました。もう一度ログインしてください。');
           setTimeout(showLogin, 1200);
+        } else if (d && d.error === 'dealer') {
+          showSend('ng', '選ばれた問屋（帳合先）が登録と合いません。お手数ですが選び直してください。');
         } else {
           showSend('ng', '送信できませんでした（' + esc((d && d.error) || '不明') + '）。<br>お手数ですが電話・FAXでご連絡ください。');
         }
@@ -885,20 +1161,28 @@
         if (d && d.ok) {
           TOKEN = d.token;
           PRICES = d.prices || {};
-          ME = { code: d.code, company: d.company, kind: d.kind || '特約店', dealer: d.dealer || '' };
+          ME = {
+            code: d.code, company: d.company, kind: d.kind || '特約店',
+            dealer: d.dealer || '',
+            dealers: (d.dealers && d.dealers.length) ? d.dealers
+                   : (d.dealer ? [{ code: '', name: d.dealer }] : [])
+          };
           document.body.classList.toggle('shop', ME.kind === '小売店');
+          setDealerField();
           el('unitHead').textContent = (ME.kind === '小売店') ? '標準卸価格' : '貴社単価';
           el('warnPrice').innerHTML = (ME.kind === '小売店')
             ? '表示している単価は<b>標準卸価格</b>です。仕入価格は帳合の特約店にご確認ください。'
             : '表示している単価は<b>貴社の単価</b>です（他社の単価は表示されません）。';
           el('hCode').textContent = d.code;
           el('hCompany').textContent = d.company + ' 様';
-          el('fCompanyView').textContent = d.company + (ME.dealer ? '（帳合：' + ME.dealer + '）' : '');
+          el('fCompanyView').textContent = d.company;
           el('login').hidden = true;
           document.body.classList.remove('locked');
           el('lPw').value = '';
           render();
           loadStock();
+          showTab('order');
+          startChat();
         } else if (d && d.error === 'locked') {
           loginMsg('パスワードの入力を続けて間違えたため、しばらくログインできません。15分ほど時間をおいてお試しください。');
         } else {
@@ -919,6 +1203,8 @@
   el('logout').onclick = function () {
     TOKEN = null; PRICES = null; ME = null;
     document.body.classList.remove('shop');
+    stopChat();
+    showTab('order');
     state.qty = {}; state.q = ''; state.page = 1;
     el('q').value = '';
     render();
@@ -955,6 +1241,16 @@
 
   el('mobarGo').onclick = function () {
     document.querySelector('.cart').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  el('tabOrder').onclick = function () { showTab('order'); };
+  el('tabChat').onclick = function () { showTab('chat'); };
+  el('chatSend').onclick = sendChat;
+  el('chatText').onkeydown = function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendChat(); }
+  };
+  el('fKchu').onchange = function () {
+    el('fKchuBox').hidden = !el('fKchu').checked;
+    if (el('fKchu').checked) { el('fKchuName').focus(); }
   };
   el('send').onclick = sendOrder;
   el('csv').onclick = exportCsv;
