@@ -109,6 +109,7 @@
   .nm { font-size: 12px; font-weight: 500; line-height: 1.45; }
   .cline .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sub { font-size: 10px; color: #7b8b99; }
+  .monly { display: none; }
   .rev { display: inline-block; padding: 1px 5px; margin-left: 6px; background: #fdf3e3; color: #8a5c11; font-size: 9px; vertical-align: 1px; }
   .price { font-size: 13px; font-weight: 700; }
   .st .in { color: #1f6b41; font-weight: 700; }
@@ -183,45 +184,57 @@
     nav.tabs { padding: 0 8px; overflow-x: auto; }
     nav.tabs div { padding: 0 12px; white-space: nowrap; }
     .notice { margin: 0 8px 0 0; font-size: 10px; padding: 3px 6px; }
-    .warn { margin: 0 10px 10px; font-size: 11px; }
+    .warn { margin: 0 8px 8px; font-size: 11px; padding: 7px 9px; line-height: 1.5; }
 
     .wrap { flex-direction: column; padding: 10px; gap: 10px; }
     .side { display: none; }
     .main, .cart { width: 100%; }
     .cart { position: static; order: 2; }
 
-    .toolbar { gap: 6px; }
-    .toolbar b { width: 100%; }
+    .toolbar { gap: 6px; padding: 8px; }
+    .toolbar b { display: none; }
+    .toolbar > span { display: none; }
     #code { flex-grow: 1; min-width: 0; width: auto; }
     #codeqty { width: 64px; }
     #q { width: 100%; flex-basis: 100%; }
     #clearq { display: none; }
 
-    table, thead, tbody, tr, td { display: block; width: auto; }
+    table, thead, tbody { display: block; width: auto; }
     table { table-layout: auto; }
     colgroup { display: none; }
     thead { display: none; }
     tbody tr {
-      border-bottom: 8px solid var(--bg); padding: 12px; background: #fff;
+      display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 10px; row-gap: 6px;
+      border-bottom: 6px solid var(--bg); padding: 10px 12px; background: #fff;
       border-top: 1px solid var(--line-l);
     }
     tbody tr.has { background: #f0f6fb; }
-    tbody td { border: 0; padding: 3px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: right; }
-    tbody td[data-l]::before {
-      content: attr(data-l); flex-shrink: 0; color: var(--muted); font-size: 11px; text-align: left;
+    /* スマホでは JAN・入数・標準卸・品番の行は出さない（品番と入数は商品名の下に入れている） */
+    tbody td.cd,
+    tbody tr > td:nth-child(3),
+    tbody tr > td:nth-child(4),
+    tbody tr > td:nth-child(6) { display: none; }
+    tbody td, tbody td.r, tbody td.c {
+      border: 0; padding: 0; display: block; text-align: left;
+      grid-column: span 1; min-width: 0;
     }
-    tbody td.cn { display: block; text-align: left; padding-bottom: 8px; }
-    tbody td.cn .nm { font-size: 15px; }
-    tbody td.cd { font-size: 13px; color: var(--navy); font-weight: 700; }
-    tbody td.cq { padding-top: 8px; }
-    tbody td.st { justify-content: flex-end; gap: 6px; align-items: baseline; }
-    tbody td.st::before { margin-right: auto; }
-    tbody td.st .ask { text-align: right; }
-    .qty { justify-content: flex-end; }
-    .qty button { width: 46px; height: 44px; font-size: 18px; }
-    .qty input { width: 64px; height: 44px; font-size: 16px; }
-    tbody td .price { font-size: 16px; }
-    tbody td.empty { display: block; text-align: center; }
+    tbody td[data-l]::before {
+      content: attr(data-l); display: block; color: var(--muted); font-size: 10px; line-height: 1.4;
+    }
+    tbody td.cn { grid-column: 1 / -1; }
+    tbody td.cn .nm { font-size: 14px; line-height: 1.4; }
+    tbody td.cn .sub { font-size: 11px; }
+    .mcode { color: var(--navy); font-weight: 700; }
+    tbody td .price { font-size: 15px; }
+    tbody td.st .ask { font-size: 10px; }
+    tbody td.cq { grid-column: span 2; }
+    tbody td.cq::before { display: none; }
+    tbody tr > td:nth-child(10), tbody tr > td:nth-child(10).r { grid-column: span 1; text-align: right; align-self: center; }
+    .qty { justify-content: flex-start; }
+    .qty button { width: 40px; height: 34px; font-size: 18px; }
+    .qty input { width: 50px; height: 34px; font-size: 16px; }
+    tbody td.empty { grid-column: 1 / -1; text-align: center; }
+    .warnrest { display: none; }
 
     .pager { flex-wrap: wrap; }
     .pager button { min-width: 40px; height: 40px; }
@@ -231,6 +244,7 @@
     .btn.go { height: 48px; }
     .btn { height: 40px; }
     .toolbar input[type=text], .toolbar input[type=number] { height: 40px; font-size: 16px; }
+    .monly { display: inline; }
     .mobileonly { display: block; width: 100%; height: 40px; padding: 0 10px; border: 1px solid #b6c1c9; background: #fff; }
     #mobar.on { display: flex; }
     body.hascart { padding-bottom: 74px; }
@@ -326,7 +340,7 @@
 </nav>
 
 <div class="warn">
-  <b>試作版です。</b> <span id="warnPrice">表示している単価は<b>貴社の単価</b>です（他社の単価は表示されません）。</span>品番・品名・JAN・上代は価格改定一覧表（894品目）にもとづきます。入数は価格表に Box Qty がある商品のみ表示、在庫はオンラインショップ（linesystem.jp）の在庫状態を反映します。ショップに掲載のない商品は「在庫は営業にお問い合わせください」と表示します。廃盤の商品は一覧に残しますが発注できません。発注ボタンを押すと社内のスプレッドシートに記録され、担当者にメールで通知が飛びます（試験運用中）。
+  <b>試作版です。</b> <span id="warnPrice">表示している単価は<b>貴社の単価</b>です（他社の単価は表示されません）。</span><span class="warnrest">品番・品名・JAN・上代は価格改定一覧表（894品目）にもとづきます。入数は価格表に Box Qty がある商品のみ表示、在庫はオンラインショップ（linesystem.jp）の在庫状態を反映します。ショップに掲載のない商品は「在庫は営業にお問い合わせください」と表示します。廃盤の商品は一覧に残しますが発注できません。発注ボタンを押すと社内のスプレッドシートに記録され、担当者にメールで通知が飛びます（試験運用中）。</span>
 </div>
 
 <div class="wrap">
@@ -601,7 +615,7 @@
       h += '<tr class="' + (n ? 'has ' : '') + (isOrderable(p) ? '' : 'dead') + '" data-c="' + esc(p.c) + '">'
         + '<td class="cd mono" data-l="品番">' + esc(p.c) + '</td>'
         + '<td class="cn"><div class="nm" title="' + esc(p.n) + '">' + esc(p.n) + (p.x ? '<span class="rev">改定</span>' : '') + '</div>'
-        + '<div class="sub">' + esc(p.b) + (p.g ? ' ／ ' + esc(p.g) : '') + '</div></td>'
+        + '<div class="sub"><span class="monly mono mcode">' + esc(p.c) + ' ／ </span>' + esc(p.b) + (p.g ? ' ／ ' + esc(p.g) : '') + (p.k ? '<span class="monly"> ／ 入数 ' + p.k + '</span>' : '') + '</div></td>'
         + '<td class="mono sub" data-l="JAN">' + esc(p.j) + '</td>'
         + '<td class="r" data-l="入数">' + (p.k || '—') + '</td>'
         + '<td class="r" data-l="' + (ME && ME.kind === '小売店' ? '標準卸価格' : '貴社単価') + '">' + (priceRow(p) ? '<span class="price">' + yen(u) + '</span>' : '<span class="sub">営業へお問い合わせください</span>')
